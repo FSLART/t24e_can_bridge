@@ -3,7 +3,7 @@ FROM ros:humble
 ENV DEBIAN_FRONTEND=noninteractive
 
 # update the system
-RUN apt-get update && apt-get upgrade 
+RUN apt-get update && apt-get upgrade -y
 
 # install python and pip
 RUN apt-get install -y python3 python3-pip
@@ -12,12 +12,28 @@ RUN apt-get install -y python3 python3-pip
 RUN pip3 install numpy python-can
 
 # install can-utils
-RUN apt-get install -y can-utils
+RUN apt-get install -y can-utils git
 # enable the module
-RUN modprobe can
+# RUN modprobe can
 # enable the interface
-RUN ip link set can0 type can bitrate 1000000
+# RUN ip link set can0 type can bitrate 1000000
 # bring up the interface
-RUN ip link set up can0
+# RUN ip link set up can0
 
+RUN mkdir -p /ros2_ws/src
 
+# install lart_msgs
+WORKDIR /ros2_ws/src
+RUN git clone -b dev https://github.com/FSLART/lart_msgs.git
+RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --parallel-workers 6"
+
+# copy the source code
+COPY . /ros2_ws/src/t24e_can_bridge
+
+# build the workspace
+WORKDIR /ros2_ws
+RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --parallel-workers 6"
+
+# start the node
+CMD ["/bin/bash", "-c", "/opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && \
+    ros2 run t24e_can_bridge bridge"]
