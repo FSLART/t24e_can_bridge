@@ -52,4 +52,7 @@ class Bridge : public rclcpp::Node
 
         /*! \brief Convert an array of bytes to an unsigned integer. */
         static uint32_t int_from_bytes(uint8_t *bytes, size_t len);
+
+        /*! \brief Convert an unsigned integer to an array of bytes. */
+        static void int_to_bytes(uint32_t value, uint8_t *bytes, size_t len);
 };

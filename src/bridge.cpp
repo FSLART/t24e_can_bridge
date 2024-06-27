@@ -25,7 +25,18 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 	// initialize publisher and subscriber
 	this->cmd_subscriber = this->create_subscription<lart_msgs::msg::DynamicsCMD>(
 		DYNAMICS_CMD_TOPIC, 10, [this](lart_msgs::msg::DynamicsCMD::UniquePtr msg) {
-			// TODO
+			
+			// create a CAN frame
+			struct can_frame frame;
+			frame.can_id = VCU_CMD_CAN_ID;
+			frame.can_dlc = VCU_CMD_RPM_LEN;
+			int_to_bytes(msg->rpm, frame.data, VCU_CMD_RPM_LEN);
+
+			// send the CAN frame
+			this->send_can_frame(frame);
+
+			// update the last command message
+			this->last_cmd = *msg;
 		});
 
 	this->dynamics_publisher = this->create_publisher<lart_msgs::msg::Dynamics>(DYNAMICS_TOPIC, 10);
@@ -51,12 +62,13 @@ void Bridge::send_can_frame(struct can_frame frame) {
 
 void Bridge::handle_can_frame(struct can_frame frame) {
 	if(frame.can_id == VCU_PWT_CAN_ID) {
-		RCLCPP_INFO(this->get_logger(), "Received VCU_PWT_CAN_ID frame");
 		uint32_t data = int_from_bytes(frame.data, VCU_PWT_RPM_LEN);
 
-		lart_msgs::msg::Dynamics dynamics;
+		// update the RPM
+		this->last_dynamics.rpm = data;
 
-		dynamics.rpm = data;
+		// publish the dynamics message
+		this->dynamics_publisher->publish(this->last_dynamics);
 	}
 }
 
@@ -66,6 +78,12 @@ uint32_t Bridge::int_from_bytes(uint8_t *bytes, size_t len) {
 		result |= bytes[i] << (8 * i);
 	}
 	return result;
+}
+
+void Bridge::int_to_bytes(uint32_t value, uint8_t *bytes, size_t len) {
+	for(size_t i = 0; i < len; i++) {
+		bytes[i] = (value >> (8 * i)) & 0xFF;
+	}
 }
 
 int main(int argc, char ** argv) {
