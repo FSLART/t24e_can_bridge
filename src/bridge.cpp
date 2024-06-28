@@ -25,8 +25,6 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 	// initialize publisher and subscriber
 	this->cmd_subscriber = this->create_subscription<lart_msgs::msg::DynamicsCMD>(
 		DYNAMICS_CMD_TOPIC, 10, [this](lart_msgs::msg::DynamicsCMD::UniquePtr msg) {
-
-			RCLCPP_INFO(this->get_logger(), "Received command message: %d", msg->rpm);
 			
 			// create a CAN frame
 			struct can_frame frame;
@@ -55,14 +53,16 @@ void Bridge::send_can_frame(struct can_frame frame) {
 }
 
 void Bridge::read_can_frames() {
-	struct can_frame frame;
-	int nbytes = read(this->s, &frame, sizeof(frame));
-	if(nbytes < 0) {
-		RCLCPP_ERROR(this->get_logger(), "Failed to read CAN frame: %s", strerror(errno));
-		return;
-	}
+	while(rclcpp::ok()) {
+		struct can_frame frame;
+		int nbytes = read(this->s, &frame, sizeof(frame));
+		if(nbytes < 0) {
+			RCLCPP_ERROR(this->get_logger(), "Failed to read CAN frame: %s", strerror(errno));
+			return;
+		}
 
-	handle_can_frame(frame);
+		handle_can_frame(frame);
+	}
 }
 
 void Bridge::handle_can_frame(struct can_frame frame) {
