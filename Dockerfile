@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get upgrade -y
 
 # install python and pip
-RUN apt-get install -y python3 python3-pip
+RUN apt-get install -y python3 python3-pip iproute2
 
 # install python packages
 RUN pip3 install numpy python-can
@@ -24,6 +24,7 @@ RUN mkdir -p /ros2_ws/src
 
 # install lart_msgs
 WORKDIR /ros2_ws/src
+RUN echo "hello"
 RUN git clone -b dev https://github.com/FSLART/lart_msgs.git
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --parallel-workers 6"
 

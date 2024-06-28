@@ -4,7 +4,7 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 
 	// create a socket
 	if((this->s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
-		RCLCPP_ERROR(this->get_logger(), "Failed to create socket");
+		RCLCPP_ERROR(this->get_logger(), "Failed to create socket: %s", strerror(errno));
 		return;
 	}
 
@@ -18,13 +18,15 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = ifr.ifr_ifindex;
 	if(bind(this->s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-		RCLCPP_ERROR(this->get_logger(), "Failed to bind socket");
+		RCLCPP_ERROR(this->get_logger(), "Failed to bind socket: %s", strerror(errno));
 		return;
 	}
 
 	// initialize publisher and subscriber
 	this->cmd_subscriber = this->create_subscription<lart_msgs::msg::DynamicsCMD>(
 		DYNAMICS_CMD_TOPIC, 10, [this](lart_msgs::msg::DynamicsCMD::UniquePtr msg) {
+
+			RCLCPP_INFO(this->get_logger(), "Received command message: %d", msg->rpm);
 			
 			// create a CAN frame
 			struct can_frame frame;
@@ -41,23 +43,26 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 
 	this->dynamics_publisher = this->create_publisher<lart_msgs::msg::Dynamics>(DYNAMICS_TOPIC, 10);
 
-	// read CAN frames
-	struct can_frame frame;
-	while (rclcpp::ok()) {
-		int nbytes = read(s, &frame, sizeof(frame));
-		if(nbytes < 0) {
-			RCLCPP_ERROR(this->get_logger(), "Failed to read CAN frame");
-			return;
-		}
-
-		handle_can_frame(frame);
-	}
+	// create a thread to read CAN frames
+	std::thread can_thread(&Bridge::read_can_frames, this);
+	can_thread.detach();
 }
 
 void Bridge::send_can_frame(struct can_frame frame) {
 	if(write(this->s, &frame, sizeof(frame)) < 0) {
-		RCLCPP_ERROR(this->get_logger(), "Failed to send CAN frame");
+		RCLCPP_ERROR(this->get_logger(), "Failed to send CAN frame: %s", strerror(errno));
 	}
+}
+
+void Bridge::read_can_frames() {
+	struct can_frame frame;
+	int nbytes = read(this->s, &frame, sizeof(frame));
+	if(nbytes < 0) {
+		RCLCPP_ERROR(this->get_logger(), "Failed to read CAN frame: %s", strerror(errno));
+		return;
+	}
+
+	handle_can_frame(frame);
 }
 
 void Bridge::handle_can_frame(struct can_frame frame) {
@@ -75,21 +80,29 @@ void Bridge::handle_can_frame(struct can_frame frame) {
 uint32_t Bridge::int_from_bytes(uint8_t *bytes, size_t len) {
 	uint32_t result = 0;
 	for(size_t i = 0; i < len; i++) {
-		result |= bytes[i] << (8 * i);
+		result |= bytes[i] << ((len - i - 1) * 8);
 	}
 	return result;
 }
 
 void Bridge::int_to_bytes(uint32_t value, uint8_t *bytes, size_t len) {
 	for(size_t i = 0; i < len; i++) {
-		bytes[i] = (value >> (8 * i)) & 0xFF;
+		bytes[i] = (value >> ((len - i - 1) * 8)) & 0xFF;
 	}
 }
 
 int main(int argc, char ** argv) {
 
 	rclcpp::init(argc, argv);
-	rclcpp::spin(std::make_shared<Bridge>());
+
+	auto node = std::make_shared<Bridge>();
+
+	rclcpp::executors::MultiThreadedExecutor executor(rclcpp::ExecutorOptions(), 4);
+
+	executor.add_node(node);
+
+	executor.spin();
+
 	rclcpp::shutdown();
 	return 0;
 }

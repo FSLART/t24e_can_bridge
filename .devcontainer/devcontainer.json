@@ -28,7 +28,12 @@
 
 	"runArgs": [
 		// use GPUs
-		"--gpus", "all"
+		"--gpus", "all",
+		"--network=host"
+	],
+
+	"mounts": [
+		"source=/dev,target=/dev,type=bind"
 	]
 
 	// Features to add to the dev container. More info: https://containers.dev/features.

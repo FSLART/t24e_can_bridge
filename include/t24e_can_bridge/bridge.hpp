@@ -7,6 +7,9 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <stdint.h>
+#include <string.h>
+#include <errno.h>
+#include <thread>
 
 #define T24E_CAN_INTERFACE "can0"
 
@@ -19,8 +22,8 @@
 #define VCU_PWT_RPM_LEN 2
 
 
-#define DYNAMICS_CMD_TOPIC "pc_origin/dynamics"
-#define DYNAMICS_TOPIC "acu_origin/dynamics"
+#define DYNAMICS_CMD_TOPIC "/pc_origin/dynamics"
+#define DYNAMICS_TOPIC "/acu_origin/dynamics"
 
 class Bridge : public rclcpp::Node
 {
@@ -49,6 +52,9 @@ class Bridge : public rclcpp::Node
 
         /*! \brief Send a CAN frame. */
         void send_can_frame(struct can_frame frame);
+
+        /*! \brief Read CAN frames. */
+        void read_can_frames();
 
         /*! \brief Convert an array of bytes to an unsigned integer. */
         static uint32_t int_from_bytes(uint8_t *bytes, size_t len);
