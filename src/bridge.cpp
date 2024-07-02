@@ -41,9 +41,36 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 
 	this->dynamics_publisher = this->create_publisher<lart_msgs::msg::Dynamics>(DYNAMICS_TOPIC, 10);
 
+	this->res_ready_publisher = this->create_publisher<std_msgs::msg::Bool>(RES_READY_TOPIC, 10);
+
+	//TODO res responds with what?
+	this->start_res();
+
 	// create a thread to read CAN frames
 	std::thread can_thread(&Bridge::read_can_frames, this);
 	can_thread.detach();
+
+	std::thread can_send_thread(&Bridge::send_can_frames, this);
+	can_send_thread.detach();
+}
+
+void Bridge::send_can_frames() {
+	// create a CAN frame
+	struct can_frame frame;
+	frame.can_id = CAN_AS_STATUS;
+	frame.can_dlc = 1;
+	this->last_state.data = lart_msgs::msg::State::READY;
+	std::chrono::time_point last_state_change = std::chrono::system_clock::now();
+
+	while(rclcpp::ok()) {
+		//If it is in ready and it has been 6 seconds since the last state change and the ready res button is pressed
+		if(this->last_state.data == lart_msgs::msg::State::READY && (std::chrono::system_clock::now() - last_state_change) > std::chrono::seconds(6) && this->res_ready.data) {
+			this->last_state.data = lart_msgs::msg::State::DRIVING;	//TODO: change to the enum: DRIVING
+		}
+		MAP_ENCODE_AS_STATE(frame.data, this->last_state.data);
+		this->send_can_frame(frame);
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+	}
 }
 
 void Bridge::send_can_frame(struct can_frame frame) {
@@ -66,8 +93,8 @@ void Bridge::read_can_frames() {
 }
 
 void Bridge::handle_can_frame(struct can_frame frame) {
-	if(frame.can_id == VCU_PWT_CAN_ID) {
-		uint32_t data = int_from_bytes(frame.data, VCU_PWT_RPM_LEN);
+	if(frame.can_id == CAN_TOJAL_SEND_RPM) {
+		uint32_t data = MAP_DECODE_TOJAL_RPM(frame.data);
 
 		// update the RPM
 		this->last_dynamics.rpm = data;
@@ -75,6 +102,30 @@ void Bridge::handle_can_frame(struct can_frame frame) {
 		// publish the dynamics message
 		this->dynamics_publisher->publish(this->last_dynamics);
 	}
+	if(frame.can_id == CAN_AS_STATUS) {
+		uint8_t as_mission = MAP_DECODE_AS_MISSION(frame.data);
+		
+		//update mission
+		this->last_mission.data = as_mission;
+	}
+	if(frame.can_id == RES_CAN_ID) {
+		//TODO receive the ready button state from the res can open
+		//TODO should we keep the true value if the car is not ready yet
+		uint8_t res_ready = frame.data[0];
+		if(res_ready == 0x03 || res_ready == 0x07)
+			this->res_ready.data = true;
+	}
+}
+
+void Bridge::start_res() {
+	// create a CAN frame
+	struct can_frame frame;
+	frame.can_id = RES_START_CAN_ID;
+	frame.can_dlc = 1;
+	frame.data[0] = 0x80;
+
+	// send the CAN frame
+	this->send_can_frame(frame);
 }
 
 uint32_t Bridge::int_from_bytes(uint8_t *bytes, size_t len) {

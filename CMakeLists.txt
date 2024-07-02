@@ -8,6 +8,7 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(lart_msgs REQUIRED)
 
 # uncomment the following section in order to fill in
@@ -27,6 +28,7 @@ ament_target_dependencies(bridge
   "rclcpp"
   "std_msgs"
   "lart_msgs"
+  "std_msgs"
 )
 
 ament_package()

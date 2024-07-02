@@ -22,6 +22,8 @@ RUN apt-get install -y can-utils git
 
 RUN mkdir -p /ros2_ws/src
 
+RUN chmod 1777 /tmp
+
 # install lart_msgs
 WORKDIR /ros2_ws/src
 RUN echo "hello"
@@ -36,5 +38,4 @@ WORKDIR /ros2_ws
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --parallel-workers 6"
 
 # start the node
-CMD ["/bin/bash", "-c", "/opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && \
-    ros2 run t24e_can_bridge bridge"]
+CMD ["/bin/bash"]
