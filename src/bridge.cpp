@@ -65,17 +65,23 @@ void Bridge::send_can_frames() {
 	// create a CAN frame
 	struct can_frame frame;
 	frame.can_id = CAN_AS_STATUS;
-	frame.can_dlc = 1;
-	this->last_state.data = lart_msgs::msg::State::READY;
+	frame.can_dlc = 8;
+	{
+		std::lock_guard<std::mutex> guard(this->state_mutex);
+		this->last_state.data = lart_msgs::msg::State::READY;
+	}
 	std::chrono::time_point last_state_change = std::chrono::system_clock::now();
 
 	while(rclcpp::ok()) {
-		//If it is in ready and it has been 6 seconds since the last state change and the ready res button is pressed
-		if(this->last_state.data == lart_msgs::msg::State::READY && (std::chrono::system_clock::now() - last_state_change) > std::chrono::seconds(6) && this->res_ready.data) {
-			this->last_state.data = lart_msgs::msg::State::DRIVING;	//TODO: change to the enum: DRIVING
+		{
+			std::lock_guard<std::mutex> guard2(this->state_mutex);
+			//If it is in ready and it has been 6 seconds since the last state change and the ready res button is pressed
+			if(this->last_state.data == lart_msgs::msg::State::READY && (std::chrono::system_clock::now() - last_state_change) > std::chrono::seconds(6) && this->res_ready.data) {
+				this->last_state.data = lart_msgs::msg::State::DRIVING;	//TODO: change to the enum: DRIVING
+			}
+			MAP_ENCODE_AS_STATE(frame.data, this->last_state.data);
+			this->send_can_frame(frame);
 		}
-		MAP_ENCODE_AS_STATE(frame.data, this->last_state.data);
-		this->send_can_frame(frame);
 		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	}
 }
@@ -118,9 +124,19 @@ void Bridge::handle_can_frame(struct can_frame frame) {
 	if(frame.can_id == RES_CAN_ID) {
 		//TODO receive the ready button state from the res can open
 		//TODO should we keep the true value if the car is not ready yet
-		uint8_t res_ready = frame.data[0];
-		if(res_ready == 0x03 || res_ready == 0x07)
+		uint8_t res_response = frame.data[0];
+		if(res_response == 0x05 || res_response == 0x07){
+			RCLCPP_WARN(this->get_logger(), "RES ready button pressed");
 			this->res_ready.data = true;
+		}
+		if(res_response == 0x00){
+			RCLCPP_WARN(this->get_logger(), "RES emergency pressed");
+			//Send Emergency to CAN
+			//TODO WE NEED TO SEND THE EMERGENCY TO THE CAN BUT WE ALSO NEED TO STOP THE THREAD THAT IS SENDING THE STATE OF DRIVING OR THE LIGHT WILL BE SWITCHING 
+			//I NEED TO HAVE IN ACCOUNT CONCURRENCY... THIS VARIABLE IS USED IN OTHER THREAD THAT SEND THE STATE OF THE CAR
+			std::lock_guard<std::mutex> guard(this->state_mutex);
+			this->last_state.data = lart_msgs::msg::State::EMERGENCY;
+		}
 	}
 }
 
@@ -128,8 +144,9 @@ void Bridge::start_res() {
 	// create a CAN frame
 	struct can_frame frame;
 	frame.can_id = RES_START_CAN_ID;
-	frame.can_dlc = 1;
-	frame.data[0] = 0x80;
+	frame.can_dlc = 2;
+	frame.data[0] = 0x01;
+	frame.data[1] = 0x00;
 
 	// send the CAN frame
 	this->send_can_frame(frame);

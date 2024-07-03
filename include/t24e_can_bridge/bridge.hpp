@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <thread>
 #include <iostream>
+#include <mutex>
 
 #define T24E_CAN_INTERFACE "can0"
 
@@ -71,6 +72,9 @@ class Bridge : public rclcpp::Node
 
         /*! \brief Actuation outputs. */
         int lResult = 1;
+
+        /*! \brief Mutex for the state message. */
+        std::mutex state_mutex;
 
         /*! \brief Handle a CAN frame data. */
         void handle_can_frame(struct can_frame frame);
