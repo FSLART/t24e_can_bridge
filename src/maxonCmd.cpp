@@ -46,7 +46,7 @@ string g_portName;
 int g_baudrate = 0;
 EAppMode g_eAppMode = AM_DEMO;
 
-const string g_programName = "HelloEposCmd";
+const string g_programName = "MaxonCmd";
 
 #ifndef MMC_SUCCESS
 	#define MMC_SUCCESS 0
@@ -79,7 +79,7 @@ int   PrintDeviceVersion();
 
 void PrintUsage()
 {
-	cout << "Usage: HelloEposCmd" << endl;
+	cout << "Usage: MaxonCmd" << endl;
 	cout << "\t-h : this help" << endl;
 	cout << "\t-n : node id (default 1)" << endl;
 	cout << "\t-d   : device name (EPOS2, EPOS4, default - EPOS4)"  << endl;
@@ -508,7 +508,7 @@ void PrintHeader()
 {
 	SeparatorLine();
 
-	LogInfo("Epos Command Library Example Program, (c) maxonmotor ag 2014-2019");
+	LogInfo("Epos Command Library Maxon control, (c) maxonmotor ag 2014-2019");
 
 	SeparatorLine();
 }
