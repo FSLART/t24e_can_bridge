@@ -460,6 +460,8 @@ int Demo(unsigned int* p_pErrorCode, int actuator_angle){
 	//printf("Target Position: %ld\n", value);
 	int ivalue; 
 	lResult = VCS_GetPositionIs(g_pKeyHandle, g_usNodeId, &ivalue, &lErrorCode);
+	
+	//TODO erase this
 	printf("Position Is: %d\n", ivalue);
 	lResult = VCS_GetPositionMust(g_pKeyHandle, g_usNodeId, &value, &lErrorCode);
 	//printf("3rd pos Is: %d\n", value);

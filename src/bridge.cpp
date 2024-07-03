@@ -19,7 +19,6 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 	addr.can_ifindex = ifr.ifr_ifindex;
 	if(bind(this->s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		RCLCPP_ERROR(this->get_logger(), "Failed to bind socket: %s", strerror(errno));
-		return;
 	}
 
 	//open maxon communication
@@ -78,6 +77,7 @@ void Bridge::send_can_frames() {
 			//If it is in ready and it has been 6 seconds since the last state change and the ready res button is pressed
 			if(this->last_state.data == lart_msgs::msg::State::READY && (std::chrono::system_clock::now() - last_state_change) > std::chrono::seconds(6) && this->res_ready.data) {
 				this->last_state.data = lart_msgs::msg::State::DRIVING;	//TODO: change to the enum: DRIVING
+				this->res_ready_publisher->publish(this->res_ready);
 			}
 			MAP_ENCODE_AS_STATE(frame.data, this->last_state.data);
 			this->send_can_frame(frame);
