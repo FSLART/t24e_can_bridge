@@ -22,6 +22,9 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 		return;
 	}
 
+	//open maxon communication
+	lResult = open_actuation();
+
 	// initialize publisher and subscriber
 	this->cmd_subscriber = this->create_subscription<lart_msgs::msg::DynamicsCMD>(
 		DYNAMICS_CMD_TOPIC, 10, [this](lart_msgs::msg::DynamicsCMD::UniquePtr msg) {
@@ -34,6 +37,10 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 
 			// send the CAN frame
 			this->send_can_frame(frame);
+
+			// send actuation to maxon
+			float actuator_angle = RAD_ST_ANGLE_TO_ACTUATOR_POS(msg->steering_angle);
+			actuate(actuator_angle);
 
 			// update the last command message
 			this->last_cmd = *msg;
@@ -153,7 +160,7 @@ int main(int argc, char ** argv) {
 	executor.add_node(node);
 
 	executor.spin();
-
 	rclcpp::shutdown();
+	close_actuation();
 	return 0;
 }

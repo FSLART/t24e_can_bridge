@@ -15,7 +15,7 @@ find_package(lart_msgs REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(bridge src/bridge.cpp)
+add_executable(bridge src/bridge.cpp src/maxonCmd.cpp)
 target_include_directories(bridge PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -30,5 +30,7 @@ ament_target_dependencies(bridge
   "lart_msgs"
   "std_msgs"
 )
+
+target_link_libraries(bridge -lEposCmd)
 
 ament_package()

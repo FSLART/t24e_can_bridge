@@ -5,6 +5,7 @@
 #include "lart_msgs/msg/state.hpp"
 #include <std_msgs/msg/bool.hpp>
 #include "../can-header-map/CAN_asdb.h"
+#include "../maxon/lart_common.h"
 #include <chrono>
 #include <linux/can.h>
 #include <sys/types.h>
@@ -68,6 +69,9 @@ class Bridge : public rclcpp::Node
         /*! \brief state of the res ready button*/
         std_msgs::msg::Bool res_ready;
 
+        /*! \brief Actuation outputs. */
+        int lResult = 1;
+
         /*! \brief Handle a CAN frame data. */
         void handle_can_frame(struct can_frame frame);
 
@@ -88,4 +92,14 @@ class Bridge : public rclcpp::Node
 
         /*! \brief Start the res. */
         void start_res();
+
 };
+
+/*! \brief Open the maxon actuation. */
+int open_actuation();
+
+/*! \brief Actuate the maxon actuator. */
+int actuate(int actuator_angle);
+
+/*! \brief Close the maxon actuation. */
+int close_actuation();
