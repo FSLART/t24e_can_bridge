@@ -18,6 +18,8 @@
 #include <thread>
 #include <iostream>
 #include <mutex>
+#include <cmath>
+#include <algorithm>
 
 #define T24E_CAN_INTERFACE "can0"
 

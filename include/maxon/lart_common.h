@@ -19,7 +19,7 @@
 #define STEERING_RATIO 4.57
 
 // The maximum steering angle in degrees
-#define MAX_STEERING_ANGLE_DEG 105
+#define MAX_STEERING_ANGLE_DEG 78
 
 // The maximum steering angle in radians
 #define MAX_STEERING_ANGLE_RAD (DEG_TO_RAD(MAX_STEERING_ANGLE_DEG))

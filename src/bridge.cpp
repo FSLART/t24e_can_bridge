@@ -24,6 +24,9 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 	//open maxon communication
 	lResult = open_actuation();
 
+	this->last_dynamics.rpm = 0;
+	this->last_dynamics.steering_angle = 0;
+
 	// initialize publisher and subscriber
 	this->cmd_subscriber = this->create_subscription<lart_msgs::msg::DynamicsCMD>(
 		DYNAMICS_CMD_TOPIC, 10, [this](lart_msgs::msg::DynamicsCMD::UniquePtr msg) {
@@ -32,15 +35,20 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 			struct can_frame frame;
 			frame.can_id = VCU_CMD_CAN_ID;
 			frame.can_dlc = VCU_CMD_RPM_LEN;
-			int_to_bytes(msg->rpm, frame.data, VCU_CMD_RPM_LEN);
+			int rpm = msg->rpm;
+			int max_variation = 30;
+			rpm = this->last_dynamics.rpm + std::clamp(rpm - this->last_dynamics.rpm, -max_variation, max_variation);
+
+			int_to_bytes(rpm, frame.data, VCU_CMD_RPM_LEN);
 
 			// send the CAN frame
 			this->send_can_frame(frame);
 
-			// send actuation to maxon
-			float actuator_angle = RAD_ST_ANGLE_TO_ACTUATOR_POS(msg->steering_angle);
-			actuate(actuator_angle);
-
+			if(RPM_TO_MS((this->last_dynamics.rpm)*3.6) > 0.5){
+				// send actuation to maxon
+				float actuator_angle = RAD_ST_ANGLE_TO_ACTUATOR_POS(msg->steering_angle);
+				actuate(actuator_angle);
+			}
 			// update the last command message
 			this->last_cmd = *msg;
 		});
@@ -76,7 +84,7 @@ void Bridge::send_can_frames() {
 			std::lock_guard<std::mutex> guard2(this->state_mutex);
 			//If it is in ready and it has been 6 seconds since the last state change and the ready res button is pressed
 			if(this->last_state.data == lart_msgs::msg::State::READY && (std::chrono::system_clock::now() - last_state_change) > std::chrono::seconds(6) && this->res_ready.data) {
-				this->last_state.data = lart_msgs::msg::State::DRIVING;	//TODO: change to the enum: DRIVING
+				this->last_state.data = lart_msgs::msg::State::DRIVING;	
 				this->res_ready_publisher->publish(this->res_ready);
 			}
 			MAP_ENCODE_AS_STATE(frame.data, this->last_state.data);
