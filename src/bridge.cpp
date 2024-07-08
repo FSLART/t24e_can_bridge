@@ -23,7 +23,6 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 
 	//open maxon communication
 	lResult = open_actuation();
-
 	this->last_dynamics.rpm = 0;
 	this->last_dynamics.steering_angle = 0;
 
@@ -44,11 +43,12 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 			// send the CAN frame
 			this->send_can_frame(frame);
 
-			if(RPM_TO_MS((this->last_dynamics.rpm)*3.6) > 0.5){
+			//TODO: DELETE THE COMMENT AFTER TESTING WITH MOTOR OFF
+			//if(RPM_TO_MS((this->last_dynamics.rpm)*3.6) > 0.5){
 				// send actuation to maxon
 				float actuator_angle = RAD_ST_ANGLE_TO_ACTUATOR_POS(msg->steering_angle);
 				actuate(actuator_angle);
-			}
+			//}
 			// update the last command message
 			this->last_cmd = *msg;
 		});
