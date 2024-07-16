@@ -23,6 +23,7 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 
 	//open maxon communication
 	lResult = open_actuation();
+	
 	this->last_dynamics.rpm = 0;
 	this->last_dynamics.steering_angle = 0;
 
@@ -36,8 +37,9 @@ Bridge::Bridge() : Node("t24e_can_bridge") {
 			frame.can_dlc = VCU_CMD_RPM_LEN;
 			int rpm = msg->rpm;
 			int max_variation = 30;
-			rpm = this->last_dynamics.rpm + std::clamp(rpm - this->last_dynamics.rpm, -max_variation, max_variation);
-
+			//RCLCPP(this->get_logger(), "RPM: %d", rpm);
+			//rpm = this->last_dynamics.rpm + std::clamp(rpm - this->last_dynamics.rpm, -max_variation, max_variation);
+			//RCLCPP(this->get_logger(), "RPM: %d", rpm);
 			int_to_bytes(rpm, frame.data, VCU_CMD_RPM_LEN);
 
 			// send the CAN frame
@@ -115,8 +117,8 @@ void Bridge::read_can_frames() {
 
 void Bridge::handle_can_frame(struct can_frame frame) {
 	if(frame.can_id == CAN_TOJAL_SEND_RPM) {
-		uint32_t data = MAP_DECODE_TOJAL_RPM(frame.data);
-
+		uint32_t data = frame.data[0] << 8 | frame.data[1];
+		// //RCLCPP(this->get_logger(), "received from can RPM: %d", data);
 		// update the RPM
 		this->last_dynamics.rpm = data;
 
