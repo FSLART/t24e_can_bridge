@@ -45,6 +45,7 @@ string g_interfaceName;
 string g_portName;
 int g_baudrate = 0;
 EAppMode g_eAppMode = AM_DEMO;
+long relative_zero=1458706882;
 
 const string g_programName = "MaxonCmd";
 
@@ -414,6 +415,16 @@ int PrepareDemo(unsigned int* p_pErrorCode)
 					}
 				}
 			}
+			if(lResult==0)
+			{
+				if(VCS_ActivateProfilePositionMode(g_pKeyHandle, g_usNodeId, p_pErrorCode) == 0)
+				{
+					LogError("VCS_ActivateProfilePositionMode", lResult, *p_pErrorCode);
+					lResult = MMC_FAILED;
+				} 
+				//TODO THIS IS FOR SETTING THE RELATIVE ZERO, FOR NOW IS BEING DEFINED PER SESSION ACUPULATED
+				//lResult = VCS_GetPositionIs(g_pKeyHandle, g_usNodeId, &relative_zero, &lErrorCode);
+			}
 		}
 	}
 	return lResult;
@@ -462,19 +473,65 @@ int Demo(unsigned int* p_pErrorCode, int actuator_angle){
 	lResult = VCS_GetPositionIs(g_pKeyHandle, g_usNodeId, &ivalue, &lErrorCode);
 	
 	//TODO erase this
-	printf("Position Is: %d\n", ivalue);
-	lResult = VCS_GetPositionMust(g_pKeyHandle, g_usNodeId, &value, &lErrorCode);
+	if(ivalue == 0)
+		printf("Position Is: %d\n", ivalue);
+	//lResult = VCS_GetPositionMust(g_pKeyHandle, g_usNodeId, &value, &lErrorCode);
 	//printf("3rd pos Is: %d\n", value);
 
 	//VCS_FindHome(g_pKeyHandle, g_usNodeId, 0, &lErrorCode);
 	//if(actuator_angle < 984405 && actuator_angle > -984405)
-	
-	VCS_MoveToPosition(g_pKeyHandle, g_usNodeId, actuator_angle, 1, 1, &lErrorCode); 
+	//VCS_FindHome(g_pKeyHandle, g_usNodeId, 0, &lErrorCode);
+	//TODO APAGAR: APENAS PARA TESTE SINUSOIDAL
+	/* int count = 370000*4;
+	for (int i = 0; i < count; i=i+5000)
+	{
+		lResult = VCS_GetPositionIs(g_pKeyHandle, g_usNodeId, &ivalue, &lErrorCode);
+
+		//TODO erase this
+		printf("Position Is: %d\n", ivalue);
+		if(i < 370000)
+			printf("first if");
+			VCS_MoveToPosition(g_pKeyHandle, g_usNodeId, i, 1, 1, &lErrorCode); 
+		else if(i < 370000*2)
+			VCS_MoveToPosition(g_pKeyHandle, g_usNodeId, (370000*2)-i, 1, 1, &lErrorCode);
+		else if(i < 37000*3)
+			VCS_MoveToPosition(g_pKeyHandle, g_usNodeId, -(i-(370000*2)), 1, 1, &lErrorCode);
+		else
+			VCS_MoveToPosition(g_pKeyHandle, g_usNodeId, -((370000*4)-i), 1, 1, &lErrorCode);
+		if(i==370000-1 || i == 370000*3-1)
+			printf("Limit reached");
+	} */
+	/*
+	bool negative = false;
+	bool positive = false;
+	for(int i = 0; i < 1000000; i++)
+	{
+		lResult = VCS_GetPositionIs(g_pKeyHandle, g_usNodeId, &ivalue, &lErrorCode);
+		printf("Position Is: %d\n", ivalue);
+		if(ivalue > 364000 || ivalue < -364000)
+			printf("Limit reached");
+		if(ivalue > 0 && !positive){
+			positive = true;
+			printf("Positiveeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\n");
+		}
+		if(ivalue < 0 && !negative && positive){
+			negative = true;
+			printf("Negativeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\n");
+		}
+		if(ivalue < 1000 && ivalue > 0 && negative)
+			break;
+		//TODO erase this
+		int position = 365000 * std::sin(2*LART_PI*5*i/1000);
+		VCS_MoveToPosition(g_pKeyHandle, g_usNodeId, position, 1, 1, &lErrorCode); 
+	}
+	*/
+	if((ivalue < relative_zero + 365000 && ivalue > relative_zero - 365000) && (actuator_angle < 365000 && actuator_angle > -365000))
+		VCS_MoveToPosition(g_pKeyHandle, g_usNodeId, relative_zero + actuator_angle, 1, 1, &lErrorCode); 
     
 	//else
 	//	LogInfo("Angle out of range");
 
-	lResult = VCS_GetPositionIs(g_pKeyHandle, g_usNodeId, &ivalue, &lErrorCode);
+	//lResult = VCS_GetPositionIs(g_pKeyHandle, g_usNodeId, &ivalue, &lErrorCode);
 	//printf("Position Is: %d\n", ivalue);
 
 /*lResult = DemoProfileVelocityMode(g_pKeyHandle, g_usNodeId, lErrorCode);
